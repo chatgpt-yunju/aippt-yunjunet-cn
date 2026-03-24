@@ -1,6 +1,5 @@
 node_modules/
-dist/
-backend/node_modules/
-backend/uploads/
 .env
-*.log
+dist/
+__pycache__/
+venv/
