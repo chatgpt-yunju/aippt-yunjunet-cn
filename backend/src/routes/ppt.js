@@ -450,52 +450,30 @@ ${text || '(此页无文字)'}
   }
 }
 
-// Call Volcengine ARK API
-function callAI(prompt) {
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.DOUBAO_API_KEY
-    const baseUrl = process.env.ARK_BASE_URL || 'ark.cn-beijing.volces.com'
-    const model = process.env.ARK_MODEL || 'deepseek-v3-2-251201'
-
-    const postData = JSON.stringify({
-      model,
+// Call AI via api.yunjunet.cn 内部网关
+async function callAI(prompt, userId = 1) {
+  const GATEWAY_URL = process.env.AI_GATEWAY_URL || 'http://localhost:3021'
+  const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || ''
+  const response = await fetch(`${GATEWAY_URL}/v1/internal/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': INTERNAL_SECRET,
+      'X-User-Id': String(userId),
+    },
+    body: JSON.stringify({
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7
-    })
-
-    const options = {
-      hostname: baseUrl,
-      path: '/api/v3/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(postData)
-      },
-      timeout: 30000
-    }
-
-    const req = https.request(options, (res) => {
-      let data = ''
-      res.on('data', chunk => data += chunk)
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data)
-          if (json.choices?.[0]?.message?.content) {
-            resolve(json.choices[0].message.content.trim())
-          } else {
-            reject(new Error('AI返回格式异常: ' + data.slice(0, 200)))
-          }
-        } catch {
-          reject(new Error('AI响应解析失败'))
-        }
-      })
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('AI请求超时')) })
-    req.write(postData)
-    req.end()
+      temperature: 0.7,
+    }),
   })
+  if (!response.ok) {
+    const err = await response.text().catch(() => '')
+    throw new Error(`AI网关返回 ${response.status}: ${err.slice(0, 100)}`)
+  }
+  const json = await response.json()
+  const content = json.choices?.[0]?.message?.content
+  if (!content) throw new Error('AI返回格式异常')
+  return content.trim()
 }
 
 // Text to speech using edge-tts
