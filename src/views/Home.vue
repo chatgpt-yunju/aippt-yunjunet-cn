@@ -72,6 +72,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiUrl, assetUrl } from '../lib/api'
 
 const router = useRouter()
 
@@ -103,14 +104,20 @@ onMounted(() => {
 
 async function loadHistory() {
   try {
-    const res = await fetch('/api/ppt/list', { headers: deviceHeaders })
-    if (res.ok) historyList.value = await res.json()
+    const res = await fetch(apiUrl('/api/ppt/list'), { headers: deviceHeaders })
+    if (res.ok) {
+      const data = await res.json()
+      historyList.value = data.map((item) => ({
+        ...item,
+        thumbnail: assetUrl(item.thumbnail)
+      }))
+    }
   } catch {}
 }
 
 async function loadLimit() {
   try {
-    const res = await fetch('/api/ppt/limit', { headers: deviceHeaders })
+    const res = await fetch(apiUrl('/api/ppt/limit'), { headers: deviceHeaders })
     if (res.ok) {
       const data = await res.json()
       dailyRemaining.value = data.remaining
@@ -131,7 +138,7 @@ async function shareLink() {
 }
 
 async function sharePPT(id) {
-  const url = `${window.location.origin}/present/${id}`
+  const url = new URL(router.resolve(`/present/${id}`).href, window.location.origin).toString()
   try {
     await navigator.clipboard.writeText(url)
     showToast.value = true
@@ -165,7 +172,7 @@ async function uploadFile(file) {
   formData.append('file', file)
 
   try {
-    const res = await fetch('/api/ppt/upload', { method: 'POST', body: formData, headers: deviceHeaders })
+    const res = await fetch(apiUrl('/api/ppt/upload'), { method: 'POST', body: formData, headers: deviceHeaders })
     const data = await res.json()
     if (!res.ok) {
       uploading.value = false
@@ -186,7 +193,7 @@ async function uploadFile(file) {
 async function pollStatus(id) {
   const poll = async () => {
     try {
-      const res = await fetch(`/api/ppt/${id}/status`)
+      const res = await fetch(apiUrl(`/api/ppt/${id}/status`))
       const data = await res.json()
       statusText.value = data.message
       progress.value = data.progress || 0

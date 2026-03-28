@@ -131,6 +131,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '../components/Avatar.vue'
+import { apiUrl, assetUrl } from '../lib/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -165,6 +166,14 @@ const savingScript = ref(false)
 
 let audio = null
 
+function normalizeSlides(items) {
+  return items.map((slide) => ({
+    ...slide,
+    image: assetUrl(slide.image),
+    audio: assetUrl(slide.audio)
+  }))
+}
+
 const handleEscape = (e) => {
   if (e.key === 'Escape' && fullscreen.value) exitFullscreen()
 }
@@ -173,12 +182,12 @@ onMounted(async () => {
   document.addEventListener('keydown', handleEscape)
   try {
     const [slidesRes, avatarsRes, voicesRes] = await Promise.all([
-      fetch(`/api/ppt/${route.params.id}/slides`),
-      fetch('/api/ppt/avatars'),
-      fetch('/api/ppt/voices')
+      fetch(apiUrl(`/api/ppt/${route.params.id}/slides`)),
+      fetch(apiUrl('/api/ppt/avatars')),
+      fetch(apiUrl('/api/ppt/voices'))
     ])
     if (!slidesRes.ok) { router.push('/'); return }
-    slides.value = await slidesRes.json()
+    slides.value = normalizeSlides(await slidesRes.json())
     if (avatarsRes.ok) avatars.value = await avatarsRes.json()
     if (voicesRes.ok) voices.value = await voicesRes.json()
   } catch { router.push('/') }
@@ -271,7 +280,7 @@ async function shareLink() {
 async function selectAvatar(id) {
   selectedAvatarId.value = id
   try {
-    await fetch(`/api/ppt/${route.params.id}/avatar`, {
+    await fetch(apiUrl(`/api/ppt/${route.params.id}/avatar`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ avatarId: id })
@@ -282,22 +291,22 @@ async function selectAvatar(id) {
 async function changeVoice() {
   voiceLoading.value = true
   try {
-    await fetch(`/api/ppt/${route.params.id}/voice`, {
+    await fetch(apiUrl(`/api/ppt/${route.params.id}/voice`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ voice: selectedVoice.value })
     })
     // Poll voice-status
     const poll = async () => {
-      const res = await fetch(`/api/ppt/${route.params.id}/voice-status`)
+      const res = await fetch(apiUrl(`/api/ppt/${route.params.id}/voice-status`))
       const data = await res.json()
       if (data.status === 'generating') {
         setTimeout(poll, 2000)
       } else {
         voiceLoading.value = false
         // Refresh slides to get new audio URLs
-        const slidesRes = await fetch(`/api/ppt/${route.params.id}/slides`)
-        if (slidesRes.ok) slides.value = await slidesRes.json()
+        const slidesRes = await fetch(apiUrl(`/api/ppt/${route.params.id}/slides`))
+        if (slidesRes.ok) slides.value = normalizeSlides(await slidesRes.json())
       }
     }
     setTimeout(poll, 2000)
@@ -322,16 +331,16 @@ async function uploadAvatarPhoto(e) {
   const formData = new FormData()
   formData.append('photo', file)
   try {
-    const res = await fetch('/api/ppt/avatar-photo', { method: 'POST', body: formData })
+    const res = await fetch(apiUrl('/api/ppt/avatar-photo'), { method: 'POST', body: formData })
     const data = await res.json()
-    if (data.url) customPhotoUrl.value = data.url
+    if (data.url) customPhotoUrl.value = assetUrl(data.url)
   } catch {}
 }
 
 async function saveScript() {
   savingScript.value = true
   try {
-    const res = await fetch(`/api/ppt/${route.params.id}/slides/${current.value}/script`, {
+    const res = await fetch(apiUrl(`/api/ppt/${route.params.id}/slides/${current.value}/script`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ script: editScriptText.value })
@@ -339,7 +348,7 @@ async function saveScript() {
     const data = await res.json()
     if (data.success) {
       slides.value[current.value].script = editScriptText.value
-      if (data.audio) slides.value[current.value].audio = data.audio
+      if (data.audio) slides.value[current.value].audio = assetUrl(data.audio)
       editingScript.value = false
     }
   } catch {}
@@ -361,7 +370,7 @@ async function sendChat() {
   if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
 
   try {
-    const res = await fetch(`/api/ppt/${route.params.id}/chat`, {
+    const res = await fetch(apiUrl(`/api/ppt/${route.params.id}/chat`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: q, slideIndex: current.value })
