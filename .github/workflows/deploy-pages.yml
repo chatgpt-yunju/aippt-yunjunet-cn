@@ -19,6 +19,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      NODE_ENV: development
       VITE_BASE_PATH: /aippt-yunjunet-cn/
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
@@ -32,10 +33,10 @@ jobs:
           cache: npm
 
       - name: Install Dependencies
-        run: npm install --include=dev --production=false
+        run: npm ci
 
       - name: Build
-        run: npx vite build
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
