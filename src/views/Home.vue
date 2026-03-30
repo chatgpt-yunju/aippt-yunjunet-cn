@@ -80,7 +80,17 @@ const router = useRouter()
 function getDeviceId() {
   let id = localStorage.getItem('aippt_device_id')
   if (!id) {
-    id = crypto.randomUUID()
+    // 使用后备方案生成UUID
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = crypto.randomUUID()
+    } else {
+      // 后备方案：生成随机字符串
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+      })
+    }
     localStorage.setItem('aippt_device_id', id)
   }
   return id

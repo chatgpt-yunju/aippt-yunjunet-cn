@@ -8,3 +8,8 @@ uploads/
 logs/
 *.log
 *.sqlite
+
+# Backups
+*.bak
+output.bak/
+uploads.bak/

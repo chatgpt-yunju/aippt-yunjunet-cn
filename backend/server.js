@@ -34,6 +34,9 @@ app.use('/output', express.static(path.join(__dirname, 'output')))
 // API routes
 app.use('/api/ppt', pptRoutes)
 
+// API route aliases for frontend compatibility
+app.use('/api/plugins/aippt', pptRoutes)
+
 // Serve frontend in production
 const distPath = path.join(__dirname, '..', 'dist')
 app.use(express.static(distPath))
