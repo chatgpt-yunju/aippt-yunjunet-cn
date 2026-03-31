@@ -1,0 +1,5 @@
+node_modules/
+output.bak/
+uploads.bak/
+.DS_Store
+*.log
