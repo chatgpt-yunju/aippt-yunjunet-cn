@@ -1,0 +1,15 @@
+node_modules/
+.env
+dist/
+__pycache__/
+venv/
+output/
+uploads/
+logs/
+*.log
+*.sqlite
+
+# Backups
+*.bak
+output.bak/
+uploads.bak/
